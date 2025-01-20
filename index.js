@@ -7,18 +7,19 @@ const state = {
   party: [],
 };
 
-//fetch data from API
+//fetch data from API. If the fetch is unsuccessful, The catch will through an error instead of crash.
 async function getEvents() {
   try {
     const response = await fetch(API_URL);
     const json = await response.json();
+    console.log("Fetched events:", json);
     state.parties = json.data;
   } catch (error) {
     console.log(error);
   }
 }
 
-//calls the POST method
+//calls the POST endpoint method. POST allows information to be writen to the database.
 async function addEvent(parties) {
   try {
     const response = await fetch(API_URL, {
@@ -37,23 +38,37 @@ async function addEvent(parties) {
 
 //parses the data that is given to the input boxes
 async function renderEvents() {
+  //DOM into the ul tag id events
   const eventElement = document.querySelector("#events");
 
+  //if the information is unsuccesful, "No Events" will be added instead of crash
   if (!state.parties.length) {
-    eventElement.innerHTML = "<li>No Events.</li>";
+    eventElement.innerHTML = "<li>No Events</li>";
     return;
   }
-
+  //map the data into parties Object
   const eventCard = state.parties.map((event) => {
+    //card is the <li> element that will have the data.
     const card = document.createElement("li");
-    card.innerHTML = `<h2>${event.name}</h2> <h3>${event.date}</h3> <h3>${event.location}<p>${event.description}</p> <button>Delete Button</button> `;
+    //innerHTML injects HTML elements and text to the element created.
+    card.innerHTML = `
+    <h2>${event.name}</h2>
+    <time datetime="${event.date}">${event.date}</time>
+    <address>${event.location}</address>
+    <p>${event.description}</p>
+    <button data-id="${event.id}">Delete Button</button> `;
+
+    const deleteButton = card.querySelector("button");
+    deleteButton.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const id = deleteButton.getAttribute("data-id");
+      await deletePost(id);
+    });
 
     return card;
   });
-  const button = document.querySelector("#delete-button");
-  button.addEventListener("click", async () => {
-    await deletePost(response.id);
-  });
+
+  //eventElement is the parent element, replace children of parent with eventCard.
   eventElement.replaceChildren(...eventCard);
 }
 //makes sure that getEvents runs before any data is accepted to the POST
@@ -80,11 +95,16 @@ form.addEventListener("submit", async (e) => {
 
 // --DELETE SECECTION--
 
-async function deletePost() {
+async function deletePost(id) {
+  console.log("Deleting event with ID:", id); // Log the ID
   try {
     const response = await fetch(API_URL + "/" + id, {
       method: "DELETE",
     });
+
+    if (!response.ok) {
+      throw new Error("Failed to delete the event");
+    }
   } catch (e) {
     console.error(e);
   }
